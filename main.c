@@ -30,55 +30,84 @@ int main(int argc, char const *argv[])
     char *st_ptr = strtok(buffer, num_delim);
     int flag = 1;
 
-    while (st_ptr != NULL && flag <= nums)
+    while (st_ptr != NULL && flag <= nums + 1)
     {
-        if (flag == 1)
+        if (nums == 2)
         {
-            // board width
-            // printf("width :: %d\n", atoi(st_ptr));
-            board_width = atoi(st_ptr);
+            /* Main board is a square */
+            if (flag == 1)
+            {
+                // board dimensions
+                board_width = atoi(st_ptr);
+                board_height = board_width;
+            }
+            if (flag == 2)
+            {
+                // sub-board width
+                subrects_width = atoi(st_ptr);
+            }
+            if (flag == 3)
+            {
+                // sub-board height
+                subrects_height = atoi(st_ptr);
+            }
         }
-        if (flag == 2)
+        else if (nums == 3)
         {
-            // board height
-            // printf("height :: %d\n", atoi(st_ptr));
-            board_height = atoi(st_ptr);
+            /* Main board is a Rect */
+            if (flag == 1)
+            {
+                // main board width
+                board_width = atoi(st_ptr);
+            }
+            if (flag == 2)
+            {
+                // main board height
+                board_height = atoi(st_ptr);
+            }
+            if (flag == 3)
+            {
+                // sub-board width
+                subrects_width = atoi(st_ptr);
+            }
+            if (flag == 4)
+            {
+                // sub-board height
+                subrects_height = atoi(st_ptr);
+            }
         }
-        if (flag > 2 && flag <= 2 + (nums - 2) / 2)
-        {
-            // sub-rect width
-            // printf("sub-rect width :: %d\n", atoi(st_ptr));
-            subrects_width = atoi(st_ptr);
-        }
-        if (flag > 2 + (nums - 2) / 2 && flag <= nums)
-        {
-            // sub-rect height
-            // printf("sub-rect height  :: %d\n", atoi(st_ptr));
-            subrects_height = atoi(st_ptr);
-        }
+
         // printf("%s\n", st_ptr);
         st_ptr = strtok(NULL, num_delim);
         flag += 1;
     }
 
-    char board[board_width][board_height];
+    char mainBoard[board_width][board_height];
     buffer_size = board_width + 1;
-    int count2 = fread(&buffer, sizeof(char), buffer_size, input_fp);
-    printf("%s\n", buffer);
-
+    char row_input[buffer_size];
+    for (int i = 0; i < board_height; i++)
+    {
+        /* Reading rows from input file  */
+        count = fread(&row_input, sizeof(char), buffer_size, input_fp);
+        for (int j = 0; j < board_width; j++)
+        {
+            /* Filling mainBoard array */
+            mainBoard[j][i] = row_input[j];
+        }
+    }
     fclose(input_fp);
 
     //! tests
     // TODO remove
-    input_fp = fopen("formatted_input.txt", "r");
-    char c;
-    while ((c = fgetc(input_fp)) != EOF)
-    {
-        printf("%c", c);
-    }
-    printf("\n");
-    fclose(input_fp);
-    printf("%d : nums \n %d : buffer_size \n", nums, buffer_size);
+    // input_fp = fopen("formatted_input.txt", "r");
+    // char c;
+    // while ((c = fgetc(input_fp)) != EOF)
+    // {
+    //     printf("%c", c);
+    // }
+    // printf("\n");
+    // fclose(input_fp);
+    printf("%d : nums \n%d : buffer_size \n", nums, buffer_size);
 
     for (int i = 0; i < count; i++)
     {
@@ -86,20 +115,17 @@ int main(int argc, char const *argv[])
     }
 
     printf("\n");
-    printf("count :: %d\n%ld\n", count, sizeof(int));
+    printf("count :: %d\n", count);
 
     printf("board width :: %d\n", board_width);
     printf("board height :: %d\n", board_height);
-    for (int i = 0; i < sizeof(subrects_width) / sizeof(int); i++)
-    {
-        printf("subrect %d width :: %d\n", i, subrects_width);
-        printf("subrect %d height :: %d\n", i, subrects_height);
-    }
 
-    printf("%d\n", ('Z' - 'A'));
-    printf("%d - %d\n", 'a', 'z');
-    printf("%d - %c\n", 'A' - 2, 'Z'-1);
-    printf("%c\n", 67);
+    printf("subrect  width :: %d\n", subrects_width);
+    printf("subrect  height :: %d\n", subrects_height);
+    // printf("%d\n", ('Z' - 'A'));
+    // printf("%d - %d\n", 'a', 'z');
+    // printf("%d - %c\n", 'A' - 2, 'Z'-1);
+    // printf("%c\n", 67);
 
     return 0;
 }
@@ -136,10 +162,8 @@ bool format_input(char *input_fn, char *output_fn, int *nums, int *buffer_size)
         {
             *buffer_size += 1;
         }
-
         fputc(c, formatted_input_fp);
     }
-
     fclose(input_fp);
     fclose(formatted_input_fp);
     return true;
@@ -227,7 +251,6 @@ bool subRect_validation(int width, int height, char board[width][height], int su
     }
 }
 
-
 char decryptor(char input_char)
 {
     char res;
@@ -242,7 +265,7 @@ char decryptor(char input_char)
         res = input_char;
     }
 
-    // Decode 
+    // Decode
     res -= 2;
     if (res == 64)
     {
@@ -252,6 +275,6 @@ char decryptor(char input_char)
     {
         res = 89;
     }
-    
+
     return res;
 }
