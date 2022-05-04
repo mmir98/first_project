@@ -4,9 +4,9 @@
 #include <stdlib.h>
 
 bool format_input(char *, char *, int *, int *);
-bool row_validation(int width, int height, char [width][height]);
-bool column_validation(int width, int height, char [width][height]);
-void subRect_validation();
+bool row_validation(int width, int height, char[width][height]);
+bool column_validation(int width, int height, char[width][height]);
+bool subRect_validation(int width, int height, char[width][height], int, int);
 
 int main(int argc, char const *argv[])
 {
@@ -24,7 +24,7 @@ int main(int argc, char const *argv[])
     }
 
     int board_width, board_height;
-    int subrects_width[(nums - 2) / 2], subrects_height[(nums - 2) / 2];
+    int subrects_width, subrects_height;
 
     FILE *input_fp = fopen("formatted_input.txt", "r");
     char buffer[buffer_size];
@@ -51,13 +51,13 @@ int main(int argc, char const *argv[])
         {
             // sub-rect width
             // printf("sub-rect width :: %d\n", atoi(st_ptr));
-            subrects_width[flag - 3] = atoi(st_ptr);
+            subrects_width = atoi(st_ptr);
         }
         if (flag > 2 + (nums - 2) / 2 && flag <= nums)
         {
             // sub-rect height
             // printf("sub-rect height  :: %d\n", atoi(st_ptr));
-            subrects_height[flag - 3 - (nums - 2) / 2] = atoi(st_ptr);
+            subrects_height = atoi(st_ptr);
         }
         // printf("%s\n", st_ptr);
         st_ptr = strtok(NULL, num_delim);
@@ -95,8 +95,8 @@ int main(int argc, char const *argv[])
     printf("board height :: %d\n", board_height);
     for (int i = 0; i < sizeof(subrects_width) / sizeof(int); i++)
     {
-        printf("subrect %d width :: %d\n", i, subrects_width[i]);
-        printf("subrect %d height :: %d\n", i, subrects_height[i]);
+        printf("subrect %d width :: %d\n", i, subrects_width);
+        printf("subrect %d height :: %d\n", i, subrects_height);
     }
 
     printf("%d\n", ('Z' - 'A'));
@@ -148,7 +148,7 @@ bool format_input(char *input_fn, char *output_fn, int *nums, int *buffer_size)
 //* Validates all rows within the given board. return true if validation succeeds and false o.w.
 bool row_validation(int width, int height, char board[width][height])
 {
-    int flag[26];    //! Either 0 or 1
+    int flag[26]; //! Either 0 or 1
     for (int i = 0; i < height; i++)
     {
         for (int j = 0; j < width; j++)
@@ -157,11 +157,12 @@ bool row_validation(int width, int height, char board[width][height])
             if (flag[index] == 1)
             {
                 /* validation failed */
-               return false;
+                return false;
             }
-            else {
+            else
+            {
                 flag[index] = 1;
-            }  
+            }
         }
     }
     /* validation succeed */
@@ -171,7 +172,7 @@ bool row_validation(int width, int height, char board[width][height])
 //* Validate all columns within the given board. return true if validation succeeds and false o.w.
 bool column_validation(int width, int height, char board[width][height])
 {
-    int flag[26];   //! Either 0 or 1
+    int flag[26]; //! Either 0 or 1
     for (int i = 0; i < width; i++)
     {
         for (int j = 0; j < height; j++)
@@ -180,18 +181,48 @@ bool column_validation(int width, int height, char board[width][height])
             if (flag[index] == 1)
             {
                 /* validation failed */
-               return false;
+                return false;
             }
-            else {
+            else
+            {
                 flag[index] = 1;
-            }  
+            }
         }
     }
     /* validation succeed */
     return true;
 }
 
-void subRect_validation()
+//* Validate all sub-boards within the given board. returns true if validation succeeds and false o.w.
+bool subRect_validation(int width, int height, char board[width][height], int subWidth, int subHeight)
 {
-}
+    char subBoard[subWidth][subHeight];
+    int subRectCount = (width / subWidth) * (height / subHeight);
 
+    for (int w = 0; w < (width / subWidth); w++)
+    {
+        for (int h = 0; h < (height / subHeight); h++)
+        {
+            // Partitioning main board
+            for (int i = 0; i < subWidth; i++)
+            {
+                for (int j = 0; j < subHeight; j++)
+                {
+                    subBoard[i][j] = board[subWidth * w + i][subHeight * h + j];
+                }
+            }
+
+            // validating sub-boards
+            if (row_validation(subWidth, subHeight, subBoard) == false)
+            {
+                // validation failed
+                return false;
+            }
+            if (column_validation(subWidth, subHeight, subBoard) == false)
+            {
+                // validation failed
+                return false;
+            }
+        }
+    }
+}
