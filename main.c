@@ -7,13 +7,10 @@ bool format_input(char *, char *, int *, int *);
 bool row_validation(int width, int height, char[width][height]);
 bool column_validation(int width, int height, char[width][height]);
 bool subRect_validation(int width, int height, char[width][height], int, int);
+char decryptor(char);
 
 int main(int argc, char const *argv[])
 {
-    // int width, height;
-    // char main_board[width][height];
-    // int sub_width, sub_height;
-
     int nums = 0, buffer_size = 0;
     char *input_fn = "input.txt"; //! Enter input file's name here
     char *output_fn = "formatted_input.txt";
@@ -100,6 +97,9 @@ int main(int argc, char const *argv[])
     }
 
     printf("%d\n", ('Z' - 'A'));
+    printf("%d - %d\n", 'a', 'z');
+    printf("%d - %c\n", 'A' - 2, 'Z'-1);
+    printf("%c\n", 67);
 
     return 0;
 }
@@ -153,7 +153,7 @@ bool row_validation(int width, int height, char board[width][height])
     {
         for (int j = 0; j < width; j++)
         {
-            int index = board[j][i] - 'a';
+            int index = board[j][i] - 'A';
             if (flag[index] == 1)
             {
                 /* validation failed */
@@ -225,4 +225,33 @@ bool subRect_validation(int width, int height, char board[width][height], int su
             }
         }
     }
+}
+
+
+char decryptor(char input_char)
+{
+    char res;
+
+    // Capitalise input_char if it's not
+    if (input_char >= 97 && input_char <= 122)
+    {
+        res = 65 + (input_char - 'a');
+    }
+    else
+    {
+        res = input_char;
+    }
+
+    // Decode 
+    res -= 2;
+    if (res == 64)
+    {
+        res = 'Z';
+    }
+    if (res == 63)
+    {
+        res = 89;
+    }
+    
+    return res;
 }
