@@ -2,12 +2,22 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+
+#define FIFO_PATH "/home/mohammad/Desktop/OS/first_project/fifo"
+#define RVP_FAILED "rvp_f"
+#define RVP_SUCCEED "rvp_s"
 
 bool format_input(char *, char *, int *, int *);
 bool row_validation(int width, int height, char[width][height]);
 bool column_validation(int width, int height, char[width][height]);
 bool subRect_validation(int width, int height, char[width][height], int, int);
 char decryptor(char);
+void decryptor_process(int width, int height, char[width][height]);
+void row_validator_process(int width, int height, char[width][height]);
 
 int main(int argc, char const *argv[])
 {
@@ -97,36 +107,143 @@ int main(int argc, char const *argv[])
     }
     fclose(input_fp);
 
-    //! tests
-    // TODO remove
-    // input_fp = fopen("formatted_input.txt", "r");
-    // char c;
-    // while ((c = fgetc(input_fp)) != EOF)
-    // {
-    //     printf("%c", c);
-    // }
-    // printf("\n");
-    // fclose(input_fp);
-    printf("%d : nums \n%d : buffer_size \n", nums, buffer_size);
-
-    for (int i = 0; i < count; i++)
+    // Creating pipe
+    int fifo = mkfifo(FIFO_PATH, 0666);
+    if (fifo == -1)
     {
-        printf("%c", buffer[i]);
+        printf("Creating fifo failed!\n");
+        return 0;
     }
 
-    printf("\n");
-    printf("count :: %d\n", count);
+    // Creating child-processes
+    int dp = fork();
+    if (dp < 0)
+    {
+        /* error */
+        printf("Can't create decryptor process\n");
+        return 0;
+    }
+    if (dp == 0)
+    {
+        /* decryptor process */
+        decryptor_process(board_width, board_height, mainBoard);
+        exit(0);
+    }
+    /* parent */
+    int fd = open(FIFO_PATH, O_RDONLY);
+    char *dec_buff;
+    char decrypted_board[board_width][board_height];
+    for (int i = 0; i < board_height; i++)
+    {
+        for (int j = 0; j < board_width; j++)
+        { // sleep(1);
+            // printf("fd in reader %d\n", fd);
+            read(fd, dec_buff, sizeof(char));
+            decrypted_board[j][i] = *dec_buff;
+            // printf("parent reads ::: %c\n", *dec_buff);
+        }
+    }
+    close(fd);
 
-    printf("board width :: %d\n", board_width);
-    printf("board height :: %d\n", board_height);
+    int rvp = fork();
+    int cvp = fork();
+    int svp = fork();
+    if (rvp < 0 && cvp < 0 && svp < 0)
+    {
+        /* forking validators failed */
+        printf("Forking validators failed!");
+        return 0;
+    }
+    if (rvp == 0 && cvp != 0 && svp != 0)
+    {
+        /* Row validator process */
+        row_validator_process(board_width, board_height, decrypted_board);
+        exit(0);
+    }
+    if (rvp != 0 && cvp == 0 && svp != 0)
+    {
+        /* Column validator process */
 
-    printf("subrect  width :: %d\n", subrects_width);
-    printf("subrect  height :: %d\n", subrects_height);
-    // printf("%d\n", ('Z' - 'A'));
-    // printf("%d - %d\n", 'a', 'z');
-    // printf("%d - %c\n", 'A' - 2, 'Z'-1);
-    // printf("%c\n", 67);
+        exit(0);
+    }
+    if (rvp != 0 && cvp != 0 && svp == 0)
+    {
+        /* SubRect validator process */
 
+        exit(0);
+    }
+    if (rvp > 0 && cvp > 0 && svp > 0)
+    {
+        /* Parent */
+        int fd = open(FIFO_PATH, O_RDONLY);
+        if (fd == -1)
+        {
+            /* parent can't read fd */
+            printf("Parent can't open FIFO to read!");
+            return 0;
+        }
+        char res_buffer[6];
+        if (read(fd, res_buffer, sizeof(RVP_SUCCEED)) == -1)
+        {
+            /*  */
+            printf("Parent can't read from FIFO");
+            return 0;
+        }
+        printf("%s\n", res_buffer);
+
+        //! tests
+        // TODO remove
+        // input_fp = fopen("formatted_input.txt", "r");
+        // char c;
+        // while ((c = fgetc(input_fp)) != EOF)
+        // {
+        //     printf("%c", c);
+        // }
+        // printf("\n");
+        // fclose(input_fp);
+        printf("%d : nums \n%d : buffer_size \n", nums, buffer_size);
+
+        for (int i = 0; i < count; i++)
+        {
+            printf("%c", buffer[i]);
+        }
+
+        printf("\n");
+        printf("count :: %d\n", count);
+
+        printf("board width :: %d\n", board_width);
+        printf("board height :: %d\n", board_height);
+
+        printf("subrect  width :: %d\n", subrects_width);
+        printf("subrect  height :: %d\n", subrects_height);
+        // printf("%d\n", ('Z' - 'A'));
+        // printf("%d - %d\n", 'a', 'z');
+        // printf("%d - %c\n", 'A' - 2, 'Z'-1);
+        // printf("%c\n", 67);
+        for (int i = 0; i < board_height; i++)
+        {
+            /* code */
+            for (int j = 0; j < board_width; j++)
+            {
+                /* code */
+                printf("%c ", mainBoard[j][i]);
+            }
+            printf("\n");
+        }
+        printf("\t\nDecrypted version!\n");
+        for (int i = 0; i < board_height; i++)
+        {
+            /* code */
+            for (int j = 0; j < board_width; j++)
+            {
+                /* code */
+                printf("%c ", decrypted_board[j][i]);
+            }
+            printf("\n");
+        }
+
+        return 0;
+    }
     return 0;
 }
 
@@ -277,4 +394,64 @@ char decryptor(char input_char)
     }
 
     return res;
+}
+
+//* Child Processes
+void decryptor_process(int width, int height, char board[width][height])
+{
+    int fd = open(FIFO_PATH, O_WRONLY);
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            char w_buff = decryptor(board[j][i]);
+            // printf("Dec writes ::: %c\n", w_buff);
+            write(fd, &w_buff, sizeof(char));
+        }
+    }
+    close(fd);
+}
+
+void row_validator_process(int width, int height, char board[width][height])
+{
+    if (row_validation(width, height, board) == false)
+    {
+        /* Validation failed */
+        int fd = open(FIFO_PATH, O_WRONLY);
+        if (fd == -1)
+        {
+            /* Openning fifo fd failed */
+            printf("Opening FIFO fd failed in RVP.");
+            return;
+        }
+        if (write(fd, RVP_FAILED, sizeof(RVP_FAILED)) == -1)
+        {
+            printf("Can't write to FIFO in RVP.");
+            return;
+        }
+        close(fd);
+        return;
+    }
+    /* Validation succeed */
+    int fd = open(FIFO_PATH, O_WRONLY);
+    if (fd == -1)
+    {
+        /* Openning fifo fd failed */
+        printf("Opening FIFO fd failed in RVP.");
+        return;
+    }
+    if (write(fd, RVP_SUCCEED, sizeof(RVP_SUCCEED)) == -1)
+    {
+        printf("Can't write to FIFO in RVP.");
+        return;
+    }
+    close(fd);
+}
+
+void column_validator_process()
+{
+}
+
+void subRect_validator_process()
+{
 }
