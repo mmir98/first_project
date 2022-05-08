@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #define FIFO_PATH "fifo"
 #define RVP_FAILED "rvp_f"
@@ -14,6 +15,9 @@
 #define CVP_SUCCEED "cvp_s"
 #define SVP_FAILED "svp_f"
 #define SVP_SUCCEED "svp_s"
+
+#define SUDOKU_RIGHT_MSG "Sudoku Puzzle constraints satisfied."
+#define SUDOKU_WRONG_MSG "Sudoku Puzzle is Wrong."
 
 bool format_input(char *, char *, int *, int *);
 bool row_validation(int width, int height, char[width][height]);
@@ -117,8 +121,11 @@ int main(int argc, char const *argv[])
     int fifo = mkfifo(FIFO_PATH, 0666);
     if (fifo == -1)
     {
-        printf("Creating fifo failed!\n");
-        return 0;
+        if (errno != EEXIST)
+        {
+            printf("Creating fifo failed!\n");
+            return 0;
+        }
     }
 
     // Creating child-processes
@@ -142,7 +149,7 @@ int main(int argc, char const *argv[])
     for (int i = 0; i < board_height; i++)
     {
         for (int j = 0; j < board_width; j++)
-        { // sleep(1);
+        {
             // printf("fd in reader %d\n", fd);
             read(fd, dec_buff, sizeof(char));
             decrypted_board[j][i] = *dec_buff;
@@ -189,30 +196,44 @@ int main(int argc, char const *argv[])
             return 0;
         }
         char res_buffer[6];
-        if (read(fd, res_buffer, sizeof(RVP_SUCCEED)) == -1)
+        int flag = 0;
+        for (int i = 0; i < 3; i++)
         {
-            /*  */
-            printf("Parent can't read from FIFO");
-            return 0;
+            if (read(fd, res_buffer, sizeof(RVP_SUCCEED)) == -1)
+            {
+                printf("Parent can't read from FIFO");
+                return 0;
+            }
+            // printf("%s\n", res_buffer);
+            if (strcmp(res_buffer, RVP_FAILED) == 0)
+            {
+                // printf("RVP failed!\n");
+                printf("%s\n", SUDOKU_WRONG_MSG);
+                break;
+            }
+            if (strcmp(res_buffer, CVP_FAILED) == 0)
+            {
+                // printf("CVP failed!\n");
+                printf("%s\n", SUDOKU_WRONG_MSG);
+                break;
+            }
+            if (strcmp(res_buffer, SVP_FAILED) == 0)
+            {
+                // printf("SVP failed!\n");
+                printf("%s\n", SUDOKU_WRONG_MSG);
+                break;
+            }
+            if (strcmp(res_buffer, RVP_SUCCEED) == 0|| strcmp(res_buffer, CVP_SUCCEED) == 0 || strcmp(res_buffer, SVP_SUCCEED) == 0)
+            {
+                flag += 1;
+            }
+            sleep(1);
         }
-        printf("%s\n", res_buffer);
-        sleep(1);
-        if (read(fd, res_buffer, sizeof(RVP_SUCCEED)) == -1)
-        {
-            /*  */
-            printf("Parent can't read from FIFO");
-            return 0;
-        }
-        printf("%s\n", res_buffer);
-        sleep(1);
-        if (read(fd, res_buffer, sizeof(RVP_SUCCEED)) == -1)
-        {
-            /*  */
-            printf("Parent can't read from FIFO");
-            return 0;
-        }
-        printf("%s\n", res_buffer);
         close(fd);
+        if (flag == 3)
+        {
+            printf("%s\n", SUDOKU_RIGHT_MSG);
+        }
 
 
         //! debug tests
@@ -226,18 +247,14 @@ int main(int argc, char const *argv[])
         // printf("\n");
         // fclose(input_fp);
         // printf("%d : nums \n%d : buffer_size \n", nums, buffer_size);
-
         // for (int i = 0; i < count; i++)
         // {
         //     printf("%c", buffer[i]);
         // }
-
         // printf("\n");
         // printf("count :: %d\n", count);
-
         // printf("board width :: %d\n", board_width);
         // printf("board height :: %d\n", board_height);
-
         // printf("subrect  width :: %d\n", subrects_width);
         // printf("subrect  height :: %d\n", subrects_height);
         // printf("%d\n", ('Z' - 'A'));
